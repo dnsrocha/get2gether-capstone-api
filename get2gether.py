@@ -1,7 +1,8 @@
 from flask import Flask, request
+from flask_cors import CORS, cross_origin
 import os
+from datetime import datetime
 from pyrebase import pyrebase
-from flask_cors import CORS
 from dotenv import load_dotenv
 load_dotenv('.env')
 
@@ -19,15 +20,67 @@ firebase = pyrebase.initialize_app(config)
 CORS(app)
 app.debug=True
 
-@app.route('/')
-def home():
-    return 'Get2Gether'
+# @app.route('/')
+# def home():
+#     return 'Get2Gether'
 
-@app.route('/add_contacts', methods=['POST'])
-def add_contacts():
+@app.route('users', methods=['POST'])
+def add_user():
+    db=firebase.database()
+    if request.method == 'POST':
+        submitted_data = request.get_json()
+        new_user = {
+            'id': submitted_data['id'],
+            'username': submitted_data['username'],
+            'full_name' submitted_data['full_name'],
+            'email': submitted_data['email'],
+            'avatar_url': submitted_data['avatar_url'],
+            'location_info': {  #this will bring up timezone info //
+                'country': submitted_data['location_info']['country'],
+                'state': submitted_data['location_info']['state'],
+                'city': submitted_data['location_info']['city'],
+                'time_zone': submitted_data['location_info']['time_zone'] 
+            },
+            #'contact_list': {},  --> check for acuracy;
+            #'availability_info': {},
+            'joined': str(datetime.utcnow())
+        }
+        db.child('users').push(new_user)
+        return({'message': 'New user successfully added.'})
+    else:
+        return({'message': 'Error: Unable to add user.'})
+
+@app.route('/add_contact', methods=['POST'])
+def add_contact():
     db = firebase.database()
-    # if request.method == 'POST':
-    return "add contacts"
+    if request.method == 'POST':
+        submitted_data = request.get_json()
+        new_contact = {
+            # 'id': submitted_data['id'], --> should this be auto defined?
+            'name': submitted_data['name'],
+            'nickname': submitted_data['nickname'],
+            'email': submitted_data['email'],
+            'location_info': {
+                'country': submitted_data['location_info']['country'],
+                'state': submitted_data['location_info']['state'],
+                'city': submitted_data['location_info']['city'],
+                'time_zone': submitted_data['location_info']['time_zone'] 
+            }
+        }
+        db.child('user_contacts').push(new_contact)
+        return ({'message': 'New contact successfully added.'})
+    else:
+        return ({'message': 'Error: Unable to add user.'})
+
+
+@app.route('/contacts_list', methods=['GET'])
+def contacts_list():
+    db = firebase.database()
+
+    }
+    return "contact list"
+    
+
 
 @app.route('/search', methods=['GET'])
 def search():
@@ -38,10 +91,6 @@ def search():
     # else:
     #     return ({'message': 'Error. Invalid endpoint.'})
 
-
-@app.route('/time')
-def get_current_time():
-    return {'time': time.time()}
 
 
 if __name__ == "__main__":
