@@ -11,7 +11,11 @@ config = {
     'apiKey': os.getenv('FLASK_APP_FIREBASE_API_KEY'),
     'authDomain': os.getenv('FLASK_APP_FIREBASE_AUTH_DOMAIN'),
     'databaseURL': os.getenv('FLASK_APP_FIREBASE_DATABASE_URL'),
-    'storageBucket': os.getenv('FLASK_APP_FIREBASE_STORAGE_BUCKET')
+    'storageBucket': os.getenv('FLASK_APP_FIREBASE_STORAGE_BUCKET'),
+    'serviceAccount': os.getenv('FLASK_APP_FIREBASE_SERVICE_ACCOUNT'),
+    'messagingSenderId': os.getenv('FLASK_APP_MESSAGING_SENDER_ID'),
+    'appId': os.getenv('FLASK_APP_APP_ID'),
+    'measurementId': os.getenv('FLASK_APP_MEASUREMENT_ID')
 }
 
 
@@ -20,11 +24,12 @@ firebase = pyrebase.initialize_app(config)
 CORS(app)
 app.debug=True
 
-# @app.route('/')
-# def home():
-#     return 'Get2Gether'
 
-@app.route('users', methods=['POST'])
+@app.route('/')
+def home():
+    return 'Get2Gether'
+
+@app.route('/users', methods=['POST'])
 def add_user():
     db=firebase.database()
     if request.method == 'POST':
@@ -32,7 +37,7 @@ def add_user():
         new_user = {
             'id': submitted_data['id'],
             'username': submitted_data['username'],
-            'full_name' submitted_data['full_name'],
+            'full_name': submitted_data['full_name'],
             'email': submitted_data['email'],
             'avatar_url': submitted_data['avatar_url'],
             'location_info': {  #this will bring up timezone info //
@@ -77,19 +82,19 @@ def add_contact():
 def contacts_list():
     db = firebase.database()
 
-    }
+
     return "contact list"
     
 
 
-@app.route('/search', methods=['GET'])
-def search():
-    # if request.method == 'GET':
-    # email = request.form['email']
-    # name = request.form['name']
-        return "search for contacts"
-    # else:
-    #     return ({'message': 'Error. Invalid endpoint.'})
+# @app.route('/search', methods=['GET'])
+# def search():
+#     if request.method == 'GET':
+#     email = request.form['email']
+#     name = request.form['name']
+#         return "search for contacts"
+#     else:
+#         return ({'message': 'Error. Invalid endpoint.'})
 
 
 
