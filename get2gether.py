@@ -39,11 +39,14 @@ app.debug=True
 #     #     'animal': 'cow'
 #     #     # 'joined': str(datetime.utcnow())
 #     # }
-#     email = 'email2@email.com'
-#     user_key = hashlib.md5(email.encode()).hexdigest() 
-#     data = {'joao': {
-#         'id': 'batata'
-#     }}
+#     nickname = 'pirilampo'
+#     # user_key = hashlib.md5(email.encode()).hexdigest() 
+#     added_by_user = 'laksdjflakjsdladsaafa'
+#     data = {
+#         'nickname': 'zedascouve',
+#         'city': 'seattle'
+#         # 'added_by_user': added_by_user
+#     }
 
 #     if request.method == 'GET':
 #         test_get = db.child('users').get().val() #['-MSnQdO2qAjpXSGf3GIT']
@@ -52,11 +55,11 @@ app.debug=True
 #         return({'ids': ids})
 #         # return 'hello'
 #     else:
-#         db.child("contacts").child(user_key).set(data)
+#         db.child("user_contacts").child(added_by_user).child(nickname).set(data)
 #         # db.child('users').push(sample_data)
 #         return 'success'
 
-#     #comprehension list syntax --> newlist = [expression for item in iterable if condition == True]
+    #comprehension list syntax --> newlist = [expression for item in iterable if condition == True]
 
 
 @app.route('/signup', methods=['POST']) #creates a new user profile
@@ -69,7 +72,7 @@ def add_user():
         new_user = {
             'full_name': submitted_data['full_name'],
             'email': submitted_data['email'],
-            'avatar_url': submitted_data['avatar_url'], #change to .get() for optional value or, if I have time, choose from available
+            'avatar_url': request.form.get('avatar_url'), # bonus =  choose from available
             'location_info': {  #this will bring up timezone info //
                 'country': submitted_data['location_info']['country'],
                 'state': submitted_data['location_info']['state'],
@@ -79,7 +82,7 @@ def add_user():
             # #'availability_info': {}, # --> time windows where user is available
             'joined': str(datetime.utcnow())
         }
-        db.child('users').child(user_id).set(new_user) #add set to syntax to name path key
+        db.child('users').child(user_id).set(new_user) 
 
 
         return({'message': 'New user successfully added.'})
@@ -117,37 +120,41 @@ def add_user():
 #         # }
 
 
-# @app.route('/add_contact', methods=['POST'])  #manually create new contact - user can have 
-# def add_contact():
-#     db = firebase.database()
-#     if request.method == 'POST':
-#         submitted_data = request.get_json()
-#         new_contact = {               # 'id': submitted_data['id'], --> not submitted but auto defined? ++ autoincrement // fix
-#             'name': submitted_data['name'],
-#             'nickname': submitted_data['nickname'],
-#             'email': submitted_data['email'],
-#             'location_info': {
-#                 'country': submitted_data['location_info']['country'],
-#                 'state': submitted_data['location_info']['state'],
-#                 'city': submitted_data['location_info']['city'],
-#                 'time_zone': submitted_data['location_info']['time_zone']  #time zone == time info // choose from scroll bar
-#             },
-#             #'added_by_user': [generate id] // if  there's an id, then you can edit, if not , no editing
-#         }
-#         db.child('user_contacts').push(new_contact)
-#         return ({'message': 'New contact successfully added.'})
-#     else:
-#         return ({'message': 'Error: Unable to add user.'})
+@app.route('/add_contact', methods=['POST'])  #manually create new contact - user can have 
+def add_contact():
+    db = firebase.database()
+    if request.method == 'POST':
+        submitted_data = request.get_json()
+        added_by_user = hashlib.md5(owner_email.encode()).hexdigest()  #// email do dono da conta, extraido da session on front end
+        contact_id = submitted_data['nickname']
+        new_contact = {   
+            'name': submitted_data['name'],
+            'nickname': submitted_data['nickname'], ##must be unique
+            'email': request.form.get('email'), #optional value
+            'location_info': {
+                'country': submitted_data['location_info']['country'],
+                'state': submitted_data['location_info']['state'],
+                'city': submitted_data['location_info']['city'],
+                # 'time_zone': submitted_data['location_info']['time_zone']  #time zone == time info // choose from scroll bar
+            },
+        }
+        db.child("user_contacts").child(added_by_user).child(contact_id).set(new_contact)
+        return ({'message': 'New contact successfully added.'})
+    else:
+        return ({'message': 'Error: Unable to add contact.'})
 
-# #will app really need to display a list of contacts or just display contacts by search
-# # @app.route('/contacts_list', methods=['GET'])
-# # def contacts_list():
-# #     db = firebase.database()
-# #     if request.method == 'GET':
-# #         contacts_list = db.child('users').get() #how do I exclude the user making the search from showing up here?
-# #         return(contact list)
-# #     else:
-# #         return ({'message': 'Error: Invalid endpoint.'})
+
+
+@app.route('/contacts_list', methods=['GET'])
+def contacts_list():
+    db = firebase.database()
+    if request.method == 'GET':
+        user = hashlib.md5(owner_email.encode()).hexdigest() #// email do usuario que ta querendo ver a lista de contatos
+        all_contacts = db.child('user_contacts').child(user).get().val()
+        # contacts_list=[u['name'] for u in all_contacts.values()] // instead, turn list into links for user info that will optionally be edited
+        return(all_contacts)
+    else:
+        return ({'message': 'Error: Invalid endpoint.'})
 
 
 # # @app.route('/search', methods=['GET'])
@@ -166,11 +173,17 @@ def add_user():
 # #     else:
 # #         return ({'message': 'Error. Invalid endpoint.'})
 
-# # @app.route('/delete_contact', methods=['GET']) #methods = delete? patch?
-# # def delete_contact()
-# #     db = firebase.database()
-# #     if request.method == 'GET'
-
+@app.route('/delete_contact', methods=['POST']) 
+def delete_contact():
+    db = firebase.database()
+    submitted_data = request.get_json()
+    list_owner = hashlib.md5(owner_email.encode()).hexdigest()
+    contact_id = submitted_data['nickname']  #nickname do contato a ser deletado
+    if request.method == 'POST':
+        db.child('user_contacts').child(list_owner).child(contact_id).remove()
+        return 'Contact deleted.'
+    else:
+        return 'ERROR: Invalid request.'
 
 
 # # @app.route('/add_friend', methods=['POST']) #called by button click //PATCH?
