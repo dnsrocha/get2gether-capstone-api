@@ -5,7 +5,8 @@ from datetime import datetime
 from pyrebase import pyrebase
 import hashlib
 from dotenv import load_dotenv
-load_dotenv('.env')
+# load_dotenv('.env')
+load_dotenv()
 
 
 config = {
@@ -22,130 +23,104 @@ config = {
 
 app = Flask(__name__)
 firebase = pyrebase.initialize_app(config)
-CORS(app) #,supports_credentials(True)
+CORS(app, supports_credentials=True)
 app.debug=True
 
 
-# @app.route('/')
-# def home():
-#     return 'Get2Gether'
 
-# @app.route('/test', methods=['GET', 'POST'])
-# def test():
-#     db = firebase.database()
-#     # sample_data = {
-#     #     'name': 'testname4',
-#     #     'email': 'email4@email.com',
-#     #     'animal': 'cow'
-#     #     # 'joined': str(datetime.utcnow())
-#     # }
-#     nickname = 'pirilampo'
-#     # user_key = hashlib.md5(email.encode()).hexdigest() 
-#     added_by_user = 'laksdjflakjsdladsaafa'
-#     data = {
-#         'nickname': 'zedascouve',
-#         'city': 'seattle'
-#         # 'added_by_user': added_by_user
-#     }
-
-#     if request.method == 'GET':
-#         test_get = db.child('users').get().val() #['-MSnQdO2qAjpXSGf3GIT']
-#         # print(test_get)
-#         ids=[u['animal'] for u in test_get.values()]
-#         return({'ids': ids})
-#         # return 'hello'
-#     else:
-#         db.child("user_contacts").child(added_by_user).child(nickname).set(data)
-#         # db.child('users').push(sample_data)
-#         return 'success'
-
-    #comprehension list syntax --> newlist = [expression for item in iterable if condition == True]
-
-
-@app.route('/signup', methods=['POST']) #creates a new user profile
+@app.route('/users', methods=['POST']) #creates a new user profile
 def add_user():
     db=firebase.database()
     if request.method == 'POST':
         submitted_data = request.get_json()
-        email = submitted_data['email']
-        user_id = hashlib.md5(email.encode()).hexdigest()
+        # email = submitted_data['email']
+        # user_id = hashlib.md5(email.encode()).hexdigest()
         new_user = {
+            'auth_id': submitted_data['auth_id'],
             'full_name': submitted_data['full_name'],
-            'email': submitted_data['email'],
-            'avatar_url': request.form.get('avatar_url'), # bonus =  choose from available
-            'location_info': {  #this will bring up timezone info //
+            'location_info': {  
                 'country': submitted_data['location_info']['country'],
                 'state': submitted_data['location_info']['state'],
-                'city': submitted_data['location_info']['city'],
-                # 'time_zone': submitted_data['location_info']['time_zone'] 
+                'city': submitted_data['location_info']['city']
             },
             # #'availability_info': {}, # --> time windows where user is available
             'joined': str(datetime.utcnow())
         }
-        db.child('users').child(user_id).set(new_user) 
+        db.child('users').push(new_user) 
 
 
-        return({'message': 'New user successfully added.'})
+        return(new_user, 201)
     else:
-        return({'message': 'Error: Unable to add user.'})
-
-# @app.route('/users/<string:id>', methods=['GET', 'PUT']) #show user profile dashboard // maybe route could be by username? => 'users/<string:id>' or 'users/<string:username>'
-# def user_profile(id):
-#     db = firebase.database()
-#     if request.method == 'GET':
-#         user = db.child('users').child(escape(id)).get().val()
-#         if user
-#             return(user)
-#         else
-#             return({'message': 'ERROR: User not found'})
-#     else:
-#         submitted_data = request.get_json()
-#         user 
+        return({'message': 'Error: Unable to add user.'}, 404)
 
 
-#         #user = db.session.query(User).filter(User.user_id == user_id).one()
-#         #total_contacts = len(get_friends(user.user_id).all())
 
-#         #check connection between user_a and user_b to show if they are friends or if requests are in pending status
-#         # user_a_id = session['current_user'][user_id]
-#         # user_b_id = user.user_id
+@app.route('/users/<string:id>', methods=['GET', 'PUT']) #show user profile dashboard // update user profile
+def user_profile(id):
+    db = firebase.database()
+    if request.method == 'GET':
+        user = db.child('users').child(escape(id)).get().val()
+        if user:
+            return(user)
+        else:
+            return({'message': 'ERROR: User not found'}, 404)
+    else:
+        submitted_data = request.get_json()
+        if user:
+            updated_info = {
+                'full_name': submitted_data['full_name'],
+                'location_info': {  
+                'country': submitted_data['location_info']['country'],
+                'state': submitted_data['location_info']['state'],
+                'city': submitted_data['location_info']['city']
+            },
+            # #'availability_info': {}, # --> time windows where user is available
+            } 
+            db.child('users').child(escape(id)).update(updated_info)
+            return(updated_info, 200)
+        else:
+            return({'message': 'ERROR: User not found'}, 404)
 
-#         # friends, pending_request = is_friend_or_pending(user_a_id, user_b_id)
-
-#         # return user profile template, where: {
-#         #     user = user,
-#         #     total_friends = total_friends,
-#         #     friends = friends,
-#         #     pending_request=pending_request
-#         # }
 
 
-@app.route('/add_contact', methods=['POST'])  #manually create new contact - user can have 
+@app.route('/users/current/<string:auth_id>', methods=['GET']) #finds user by authentication ID
+def search_user(auth_id):
+    db = firebase.database()
+    user = db.child('users').order_by_child('auth_id').equal_to(auth_id).get().val()
+    if user:
+        return (user, 200)
+    else:
+        return({'message': 'ERROR: No user found for this authentication ID'}, 404)
+        
+
+
+@app.route('/add_contact', methods=['POST'])  #manually create new contact 
 def add_contact():
     db = firebase.database()
     if request.method == 'POST':
         submitted_data = request.get_json()
-        added_by_user = hashlib.md5(owner_email.encode()).hexdigest()  #// email do dono da conta, extraido da session on front end
-        contact_id = submitted_data['nickname']
+        # added_by_user = hashlib.md5(owner_email.encode()).hexdigest()  #// email do dono da conta, extraido da session on front end
+        # contact_id = submitted_data['nickname']
         new_contact = {   
             'name': submitted_data['name'],
-            'nickname': submitted_data['nickname'], ##must be unique
-            'email': request.form.get('email'), #optional value
+            'nickname': submitted_data['nickname'],
+            'email': submitted_data['email'], #optional value
             'location_info': {
                 'country': submitted_data['location_info']['country'],
                 'state': submitted_data['location_info']['state'],
                 'city': submitted_data['location_info']['city'],
+                # 'postal_code': submitted_data['postal_code'] #optional data
                 # 'time_zone': submitted_data['location_info']['time_zone']  #time zone == time info // choose from scroll bar
             },
         }
-        db.child("user_contacts").child(added_by_user).child(contact_id).set(new_contact)
+        db.child("user_contacts").push(new_contact)
         return ({'message': 'New contact successfully added.'})
     else:
         return ({'message': 'Error: Unable to add contact.'})
 
 
 
-@app.route('/contacts_list', methods=['GET'])
+@app.route('/contacts_list/', methods=['GET'])
 def contacts_list():
     db = firebase.database()
     if request.method == 'GET':
