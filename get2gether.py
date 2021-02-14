@@ -5,6 +5,7 @@ from datetime import datetime
 from pyrebase import pyrebase
 import hashlib
 from dotenv import load_dotenv
+import json 
 # load_dotenv('.env')
 load_dotenv()
 
@@ -33,8 +34,6 @@ def add_user():
     db=firebase.database()
     if request.method == 'POST':
         submitted_data = request.get_json()
-        # email = submitted_data['email']
-        # user_id = hashlib.md5(email.encode()).hexdigest()
         new_user = {
             'auth_id': submitted_data['auth_id'],
             'full_name': submitted_data['full_name'],
@@ -83,15 +82,14 @@ def user_profile(id):
 
 
 
-@app.route('/users/current/<string:auth_id>', methods=['GET']) #finds user by authentication ID
-def search_user(auth_id):
-    db = firebase.database()
-    user = db.child('users').order_by_child('auth_id').equal_to(auth_id).get().val()
-    if user:
-        return (user, 200)
-    else:
-        return({'message': 'ERROR: No user found for this authentication ID'}, 404)
-        
+# @app.route('/users/current/<string:auth_id>', methods=['GET']) #finds user by authentication ID
+# def search_user(auth_id):
+#     db = firebase.database()
+#     user = db.child('users').order_by_child('auth_id').equal_to(auth_id).get().val()
+#     if user:
+#         return (user, 200)
+#     else:
+#         return({'message': 'ERROR: No user found for this authentication ID'}, 404)
 
 
 @app.route('/add_contact', methods=['POST'])  #manually create new contact 
@@ -99,37 +97,55 @@ def add_contact():
     db = firebase.database()
     if request.method == 'POST':
         submitted_data = request.get_json()
-        # added_by_user = hashlib.md5(owner_email.encode()).hexdigest()  #// email do dono da conta, extraido da session on front end
-        # contact_id = submitted_data['nickname']
+        # added_by_user = submitted_data['auth_id']
+        added_by_user = '1XaMJLIu9UR8nskaexQW7mJ3n9t1'
         new_contact = {   
             'name': submitted_data['name'],
             'nickname': submitted_data['nickname'],
-            'email': submitted_data['email'], #optional value
+            # 'email': submitted_data['email'], #optional value
             'location_info': {
                 'country': submitted_data['location_info']['country'],
                 'state': submitted_data['location_info']['state'],
                 'city': submitted_data['location_info']['city'],
-                # 'postal_code': submitted_data['postal_code'] #optional data
-                # 'time_zone': submitted_data['location_info']['time_zone']  #time zone == time info // choose from scroll bar
-            },
+            }
         }
-        db.child("user_contacts").push(new_contact)
+        db.child("user_contacts").child(added_by_user).push(new_contact)
         return ({'message': 'New contact successfully added.'})
     else:
         return ({'message': 'Error: Unable to add contact.'})
 
 
 
-@app.route('/contacts_list/', methods=['GET'])
-def contacts_list():
+
+# shows contact list for current user by authentication ID
+@app.route('/contacts_list/<string:id>', methods=['GET'])
+def contacts_list(id):
     db = firebase.database()
-    if request.method == 'GET':
-        user = hashlib.md5(owner_email.encode()).hexdigest() #// email do usuario que ta querendo ver a lista de contatos
-        all_contacts = db.child('user_contacts').child(user).get().val()
-        # contacts_list=[u['name'] for u in all_contacts.values()] // instead, turn list into links for user info that will optionally be edited
-        return(all_contacts)
-    else:
-        return ({'message': 'Error: Invalid endpoint.'})
+
+
+    all_contacts = db.child('user_contacts').child(str(id)).get().val()
+
+    result = []
+    for key in all_contacts.keys():
+        contact = all_contacts[key]
+        contact['contact_id'] = key
+        result.append(contact)
+
+    return({'result': result})
+
+    # # auth_id = '1XaMJLIu9UR8nskaexQW7mJ3n9t1'
+
+    # added_by_user = str(auth_id)
+    # all_contacts = db.child('user_contacts').order_by_child(added_by_user).equal_to(auth_id).get().val()
+    # user = db.child('users').order_by_child('auth_id').equal_to(auth_id).get().val()
+
+    # if user:
+    #     if all_contacts:
+    #         return(all_contacts, 200)
+    #     else:
+    #         return ({'message': 'This user did not add any contacts yet.'}, 404)
+    # else:
+    #     return ({'message': 'ERROR: No user found for this authentication ID'}, 404)
 
 
 # # @app.route('/search', methods=['GET'])
@@ -148,14 +164,14 @@ def contacts_list():
 # #     else:
 # #         return ({'message': 'Error. Invalid endpoint.'})
 
-@app.route('/delete_contact', methods=['POST']) 
-def delete_contact():
+@app.route('/delete_contact/<string:id>', methods=['POST']) 
+def delete_contact(id):
     db = firebase.database()
     submitted_data = request.get_json()
-    list_owner = hashlib.md5(owner_email.encode()).hexdigest()
-    contact_id = submitted_data['nickname']  #nickname do contato a ser deletado
+    contact_id = submitted_data['contact_id']
+
     if request.method == 'POST':
-        db.child('user_contacts').child(list_owner).child(contact_id).remove()
+        db.child('user_contacts').child(str(id)).child(contact_id).remove()
         return 'Contact deleted.'
     else:
         return 'ERROR: Invalid request.'
