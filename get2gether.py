@@ -40,7 +40,7 @@ def add_user():
                 'state': submitted_data['location_info']['state'],
                 'city': submitted_data['location_info']['city']
             },
-            # 'availability_info': submitted_data['availability_info'], # --> time windows where user is available
+            'availability_info': submitted_data['availability_info'],
             'joined': str(datetime.utcnow())
         }
         db.child('users').push(new_user) 
@@ -70,10 +70,10 @@ def user_profile(id):
                 'country': submitted_data['location_info']['country'],
                 'state': submitted_data['location_info']['state'],
                 'city': submitted_data['location_info']['city']
-            }
+            },
+            'availability_info': submitted_data['availability_info'],
         }
-        # 'availability_info': submitted_data['availability_info'], # --> time windows where user is available
-
+        
         db.child('users').child(id).update(updated_info)
         return(updated_info, 200)
 
@@ -104,27 +104,13 @@ def add_contact():
                 'state': submitted_data['location_info']['state'],
                 'city': submitted_data['location_info']['city'],
             },
-            # 'availability_info': submitted_data['availability_info'], # --> time windows where user is available
+            'availability_info': submitted_data['availability_info'], # --> time windows where user is available
         }
         db.child("user_contacts").child(added_by_user).push(new_contact)
         return ({'message': 'New contact successfully added.'})
     else:
         return ({'message': 'Error: Unable to add contact.'})
         
-
-
-# @app.route('/contacts/<string:auth_id>/<string:contact_id>', methods=['GET']) #finds contact by authentication ID
-# def search_contact(auth_id):
-#     db = firebase.database()
-
-#     contact_id = submitted_data['contact_id']
-#     submitted_data = request.get_json()
-#     contact = db.child('user_contacts').child(str(id)).child(str(contact_id)).get().val()
-#     if contact:
-#         return (contact, 200)
-#     else:
-#         return({'message': 'ERROR: Contact not found'}, 404)
-
 
 
 # shows contact list for current user by authentication ID
@@ -161,7 +147,7 @@ def update_contact_info(id, contact_id):
             'state': submitted_data['location_info']['state'],
             'city': submitted_data['location_info']['city']
             },
-            # 'availability_info': submitted_data['availability_info'], # --> time windows where user is available
+            'availability_info': submitted_data['availability_info'], # --> time windows where user is available
             } 
 
         contact_to_update = db.child('user_contacts').child(str(id)).child(contact_id).update(updated_contact_info)
@@ -185,6 +171,17 @@ def delete_contact(id):
 
 
 
+# @app.route('/contacts/<string:auth_id>/<string:contact_id>', methods=['GET']) #finds contact by authentication ID
+# def search_contact(auth_id):
+#     db = firebase.database()
+
+#     contact_id = submitted_data['contact_id']
+#     submitted_data = request.get_json()
+#     contact = db.child('user_contacts').child(str(id)).child(str(contact_id)).get().val()
+#     if contact:
+#         return (contact, 200)
+#     else:
+#         return({'message': 'ERROR: Contact not found'}, 404)
 
 
 # # @app.route('/search', methods=['GET'])
