@@ -154,11 +154,10 @@ def update_contact_info(id, contact_id):
         return(updated_contact_info, 200)
 
 
-@app.route('/delete_contact/<string:id>', methods=['POST']) 
-def delete_contact(id):
+@app.route('/contacts/<string:id>/delete-contact/<string:contact_id>', methods=['POST']) 
+def delete_contact(id, contact_id):
     db = firebase.database()
     submitted_data = request.get_json()
-    contact_id = submitted_data['contact_id']
 
     if request.method == 'POST':
         db.child('user_contacts').child(str(id)).child(contact_id).remove()
